@@ -217,20 +217,20 @@ elif menu == "Özet & Grafikler":
 
     # Önce ihaleleri DataFrame yap
    if len(st.session_state.ihaleler) == 0:
-    st.info("Henüz ihale girişi yok.")
-    filtre = pd.DataFrame(columns=['kar', 'ihale_tutari', 'toplam_maliyet', 'ihale_turu', 'tarih'])
-else:
-    df_ihale = pd.DataFrame(st.session_state.ihaleler)
-    df_ihale['tarih'] = pd.to_datetime(df_ihale['tarih'])
+              st.info("Henüz ihale girişi yok.")
+               filtre = pd.DataFrame(columns=['kar', 'ihale_tutari', 'toplam_maliyet', 'ihale_turu', 'tarih'])
+                   else:
+                      df_ihale = pd.DataFrame(st.session_state.ihaleler)
+                     df_ihale['tarih'] = pd.to_datetime(df_ihale['tarih'])
     
-    secim = st.selectbox("Rapor Tipi", ["Günlük", "Haftalık", "Aylık"])
-    now = datetime.now()
+                      secim = st.selectbox("Rapor Tipi", ["Günlük", "Haftalık", "Aylık"])
+                       now = datetime.now()
 
     if secim == "Günlük":
         filtre = df_ihale[df_ihale['tarih'].dt.date == now.date()]
-    elif secim == "Haftalık":
+       elif secim == "Haftalık":
         filtre = df_ihale[df_ihale['tarih'].dt.isocalendar().week == now.isocalendar()[1]]
-    else:
+     else:
         filtre = df_ihale[df_ihale['tarih'].dt.month == now.month]
 
     st.subheader(f"{secim} İhale Verileri")
