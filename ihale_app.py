@@ -103,6 +103,7 @@ if menu == "Mevcut Durum":
     st.write(f"**Dorse Sayısı:** {st.session_state.dorse_sayisi}")
 
 # --------------- İHALE VE OPERASYONEL MALİYETLER ---------------
+
 elif menu == "İhale & Operasyonel Maliyetler":
     # --- İhale Ekle ---
     st.header("İhale Ekle")
