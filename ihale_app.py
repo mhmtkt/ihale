@@ -2,25 +2,45 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 
-# Kullanıcı girişi kontrolü (basit demo)
+if 'users' not in st.session_state:
+    # Demo amaçlı kullanıcılar: {'kanka': '1234'} varsayılan kayıtlı kullanıcı
+    st.session_state.users = {"kanka": "1234"}
+
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
+def register():
+    st.subheader("Kayıt Ol")
+    new_user = st.text_input("Yeni Kullanıcı Adı", key="register_user")
+    new_pass = st.text_input("Yeni Şifre", type="password", key="register_pass")
+    if st.button("Kayıt Ol"):
+        if new_user in st.session_state.users:
+            st.error("Bu kullanıcı adı zaten var!")
+        elif new_user == "" or new_pass == "":
+            st.error("Lütfen kullanıcı adı ve şifre girin!")
+        else:
+            st.session_state.users[new_user] = new_pass
+            st.success("Kayıt başarılı! Şimdi giriş yapabilirsiniz.")
+
 def login():
-    username = st.text_input("Kullanıcı Adı")
-    password = st.text_input("Şifre", type="password")
+    st.subheader("Giriş Yap")
+    username = st.text_input("Kullanıcı Adı", key="login_user")
+    password = st.text_input("Şifre", type="password", key="login_pass")
     if st.button("Giriş"):
-        if username == "kanka" and password == "1234":
+        if username in st.session_state.users and st.session_state.users[username] == password:
             st.session_state.logged_in = True
+            st.session_state.current_user = username
         else:
             st.error("Hatalı kullanıcı adı veya şifre")
 
 if not st.session_state.logged_in:
-    st.title("İhale Takip Uygulaması - Giriş")
-    login()
+    st.title("İhale Takip Uygulaması - Giriş/Kayıt")
+    col1, col2 = st.columns(2)
+    with col1:
+        register()
+    with col2:
+        login()
     st.stop()
-
-st.title("İhale Takip Uygulaması")
 
 # Başlangıçta session_state değişkenlerini oluştur
 if 'arac_listesi' not in st.session_state:
