@@ -215,30 +215,32 @@ elif menu == "Özet & Grafikler":
     st.header("Özet ve Grafikler")
 
     # Önce ihaleleri DataFrame yap
-    if len(st.session_state.ihaleler) == 0:
-        st.info("Henüz ihale girişi yok.")
+   if len(st.session_state.ihaleler) == 0:
+    st.info("Henüz ihale girişi yok.")
+    filtre = pd.DataFrame(columns=['kar', 'ihale_tutari', 'toplam_maliyet', 'ihale_turu', 'tarih'])
+else:
+    df_ihale = pd.DataFrame(st.session_state.ihaleler)
+    df_ihale['tarih'] = pd.to_datetime(df_ihale['tarih'])
+    
+    secim = st.selectbox("Rapor Tipi", ["Günlük", "Haftalık", "Aylık"])
+    now = datetime.now()
+
+    if secim == "Günlük":
+        filtre = df_ihale[df_ihale['tarih'].dt.date == now.date()]
+    elif secim == "Haftalık":
+        filtre = df_ihale[df_ihale['tarih'].dt.isocalendar().week == now.isocalendar()[1]]
     else:
-        df_ihale = pd.DataFrame(st.session_state.ihaleler)
-        df_ihale['tarih'] = pd.to_datetime(df_ihale['tarih'])
+        filtre = df_ihale[df_ihale['tarih'].dt.month == now.month]
 
-        secim = st.selectbox("Rapor Tipi", ["Günlük", "Haftalık", "Aylık"])
-        now = datetime.now()
+    st.subheader(f"{secim} İhale Verileri")
+    st.write(f"Toplam İhale Sayısı: {len(filtre)}")
+    st.write(f"Toplam İhale Tutarı (Milyon Dolar): {filtre['ihale_tutari'].sum():.2f}")
+    st.write(f"Toplam Ürün Maliyeti (Dolar): {filtre['toplam_maliyet'].sum():.2f}")
+    st.write(f"Toplam İhale Karı (Milyon Dolar): {filtre['kar'].sum():.2f}")
 
-        if secim == "Günlük":
-            filtre = df_ihale[df_ihale['tarih'].dt.date == now.date()]
-        elif secim == "Haftalık":
-            filtre = df_ihale[df_ihale['tarih'].dt.isocalendar().week == now.isocalendar()[1]]
-        else:
-            filtre = df_ihale[df_ihale['tarih'].dt.month == now.month]
+    st.write("İhale Türü Sayıları:")
+    st.write(filtre['ihale_turu'].value_counts())
 
-        st.subheader(f"{secim} İhale Verileri")
-        st.write(f"Toplam İhale Sayısı: {len(filtre)}")
-        st.write(f"Toplam İhale Tutarı (Milyon Dolar): {filtre['ihale_tutari'].sum():.2f}")
-        st.write(f"Toplam Ürün Maliyeti (Dolar): {filtre['toplam_maliyet'].sum():.2f}")
-        st.write(f"Toplam İhale Karı (Milyon Dolar): {filtre['kar'].sum():.2f}")
-
-        st.write("İhale Türü Sayıları:")
-        st.write(filtre['ihale_turu'].value_counts())
 
     # Toplam Operasyonel Maliyetler
     toplam_sofor_maasi = sum([m['maas'] for m in st.session_state.sofor_maaslari])
