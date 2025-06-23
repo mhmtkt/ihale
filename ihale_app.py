@@ -1,0 +1,250 @@
+import streamlit as st
+from datetime import datetime
+import pandas as pd
+
+# Kullanıcı girişi kontrolü (basit demo)
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+def login():
+    username = st.text_input("Kullanıcı Adı")
+    password = st.text_input("Şifre", type="password")
+    if st.button("Giriş"):
+        if username == "kanka" and password == "1234":
+            st.session_state.logged_in = True
+        else:
+            st.error("Hatalı kullanıcı adı veya şifre")
+
+if not st.session_state.logged_in:
+    st.title("İhale Takip Uygulaması - Giriş")
+    login()
+    st.stop()
+
+st.title("İhale Takip Uygulaması")
+
+# Başlangıçta session_state değişkenlerini oluştur
+if 'arac_listesi' not in st.session_state:
+    st.session_state.arac_listesi = []
+
+if 'dorse_sayisi' not in st.session_state:
+    st.session_state.dorse_sayisi = 0
+
+if 'sofor_maaslari' not in st.session_state:
+    st.session_state.sofor_maaslari = []
+
+if 'bakim_giderleri' not in st.session_state:
+    st.session_state.bakim_giderleri = []
+
+if 'arac_alimlari' not in st.session_state:
+    st.session_state.arac_alimlari = []
+
+if 'arac_satimlari' not in st.session_state:
+    st.session_state.arac_satimlari = []
+
+if 'ihaleler' not in st.session_state:
+    st.session_state.ihaleler = []
+
+if 'garaj_seviyesi' not in st.session_state:
+    st.session_state.garaj_seviyesi = 0
+
+if 'garaj_harcamasi' not in st.session_state:
+    st.session_state.garaj_harcamasi = 0.0
+
+if 'garaj_bakimi' not in st.session_state:
+    st.session_state.garaj_bakimi = 0.0  # Yeni eklendi
+
+# --- Mevcut Durum Girişi ---
+st.header("Mevcut Durumunuzu Girin")
+with st.form("durum_form"):
+    garaj_seviyesi = st.number_input("Garaj Seviyesi", min_value=0, step=1, value=st.session_state.garaj_seviyesi)
+    arac_sayisi = st.number_input("Araç Sayısı", min_value=0, step=1, value=len(st.session_state.arac_listesi))
+    dorse_sayisi = st.number_input("Dorse Sayısı", min_value=0, step=1, value=st.session_state.dorse_sayisi)
+
+    arac_isimleri = []
+    for i in range(arac_sayisi):
+        default_isim = st.session_state.arac_listesi[i] if i < len(st.session_state.arac_listesi) else ""
+        isim = st.text_input(f"Araç {i+1} ismi (örn: Ats-2945)", value=default_isim, key=f"arac_{i}")
+        arac_isimleri.append(isim)
+
+    durum_submit = st.form_submit_button("Kaydet")
+
+if durum_submit:
+    st.session_state.garaj_seviyesi = garaj_seviyesi
+    st.session_state.dorse_sayisi = dorse_sayisi
+    st.session_state.arac_listesi = [a for a in arac_isimleri if a.strip() != ""]
+    st.success("Mevcut durum güncellendi!")
+
+st.write(f"**Garaj Seviyesi:** {st.session_state.garaj_seviyesi}")
+st.write(f"**Araç Sayısı:** {len(st.session_state.arac_listesi)}")
+st.write(f"**Dorse Sayısı:** {st.session_state.dorse_sayisi}")
+
+st.markdown("---")
+
+# --- İhale Ekleme ---
+st.header("İhale Ekle")
+with st.form("ihale_form"):
+    ihale_turu = st.text_input("İhale Türü (örn: Kimyasal)")
+    ihale_tutari = st.number_input("İhale Tutarı (Milyon Dolar)", min_value=0.0, format="%.2f")
+    urun_miktari = st.number_input("İhale Taşınan Ürün Miktarı (Adet)", min_value=0, step=1)
+    birim_maliyet = st.number_input("İhale Taşınan Ürün Birim Maliyeti (Dolar)", min_value=0.0, format="%.2f")
+    ihale_submit = st.form_submit_button("İhale Ekle")
+
+if ihale_submit:
+    yeni_ihale = {
+        "tarih": datetime.now(),
+        "ihale_turu": ihale_turu,
+        "ihale_tutari": ihale_tutari,
+        "urun_miktari": urun_miktari,
+        "birim_maliyet": birim_maliyet,
+        "toplam_maliyet": urun_miktari * birim_maliyet,
+        "kar": ihale_tutari - (urun_miktari * birim_maliyet)
+    }
+    st.session_state.ihaleler.append(yeni_ihale)
+    st.success("İhale başarıyla eklendi!")
+
+st.markdown("---")
+
+# --- Operasyonel Maliyetler ---
+
+st.header("Operasyonel Maliyetler")
+
+# 1. Şoför Maaşı Ekle
+with st.expander("Şoför Maaşı Ekle"):
+    isim = st.text_input("Şoför Adı", key="sofor_adi")
+    maas = st.number_input("Maaş (Dolar)", min_value=0.0, format="%.2f", key="sofor_maas")
+    if st.button("Ekle", key="sofor_ekle"):
+        if isim and maas > 0:
+            st.session_state.sofor_maaslari.append({"isim": isim, "maas": maas})
+            st.success(f"{isim} için maaş eklendi.")
+        else:
+            st.error("Lütfen isim ve maaş giriniz.")
+
+# 2. Araç Bakım Gideri Ekle
+with st.expander("Araç Bakım Gideri Ekle"):
+    if st.session_state.arac_listesi:
+        arac_secim = st.selectbox("Araç Seçin", st.session_state.arac_listesi)
+        bakim_tutar = st.number_input("Bakım Maliyeti (Dolar)", min_value=0.0, format="%.2f", key="bakim_tutar")
+        if st.button("Bakım Gideri Ekle", key="bakim_ekle"):
+            if bakim_tutar > 0:
+                st.session_state.bakim_giderleri.append({"arac": arac_secim, "maliyet": bakim_tutar})
+                st.success(f"{arac_secim} için bakım maliyeti eklendi.")
+            else:
+                st.error("Geçerli bakım maliyeti giriniz.")
+    else:
+        st.info("Önce araç ekleyin.")
+
+# 3. Yeni Araç Alımı
+with st.expander("Yeni Araç Alımı"):
+    yeni_arac_adi = st.text_input("Araç Adı", key="yeni_arac_adi")
+    arac_alim_fiyati = st.number_input("Alış Fiyatı (Dolar)", min_value=0.0, format="%.2f", key="arac_alim_fiyat")
+    if st.button("Araç Ekle", key="arac_ekle"):
+        if yeni_arac_adi and arac_alim_fiyati > 0:
+            st.session_state.arac_listesi.append(yeni_arac_adi)
+            st.success(f"{yeni_arac_adi} aracı eklendi.")
+        else:
+            st.error("Araç adı ve fiyatını giriniz.")
+
+# 4. Dorse Alımı
+with st.expander("Dorse Alımı"):
+    dorse_tipi = st.text_input("Dorse Tipi", key="dorse_tipi")
+    dorse_alim_fiyati = st.number_input("Alış Fiyatı (Dolar)", min_value=0.0, format="%.2f", key="dorse_alim_fiyat")
+    if st.button("Dorse Ekle", key="dorse_ekle"):
+        if dorse_tipi and dorse_alim_fiyati > 0:
+            st.session_state.dorse_sayisi += 1
+            st.success(f"{dorse_tipi} dorsesi eklendi.")
+        else:
+            st.error("Dorse tipi ve fiyatını giriniz.")
+
+# 5. Araç Satımı
+with st.expander("Araç Satımı"):
+    if st.session_state.arac_listesi:
+        arac_satim_secim = st.selectbox("Satılacak Aracı Seçin", st.session_state.arac_listesi, key="arac_satim_secim")
+        arac_satim_fiyati = st.number_input("Satış Fiyatı (Dolar)", min_value=0.0, format="%.2f", key="arac_satim_fiyat")
+        if st.button("Araç Sat", key="arac_sat_button"):
+            if arac_satim_fiyati > 0:
+                st.session_state.arac_listesi.remove(arac_satim_secim)
+                st.session_state.arac_satimlari.append({"arac": arac_satim_secim, "fiyat": arac_satim_fiyati})
+                st.success(f"{arac_satim_secim} satıldı.")
+            else:
+                st.error("Satış fiyatı giriniz.")
+    else:
+        st.info("Satılacak araç yok.")
+
+# 6. Garaj Yükseltme
+with st.expander("Garaj Yükseltme"):
+    yeni_garaj_seviye = st.number_input("Yeni Garaj Seviyesi", min_value=0, step=1, value=st.session_state.garaj_seviyesi, key="yeni_garaj_seviye")
+    harcanan_tutar = st.number_input("Harcanan Tutar (Milyon Dolar)", min_value=0.0, format="%.2f", key="garaj_harcanan")
+    if st.button("Garajı Yükselt", key="garaj_yukselt"):
+        st.session_state.garaj_seviyesi = yeni_garaj_seviye
+        st.session_state.garaj_harcamasi = harcanan_tutar
+        st.success(f"Garaj seviyesi {yeni_garaj_seviye} olarak güncellendi.")
+
+# 7. Garaj Bakımı Maliyeti (Yeni Eklenen)
+with st.expander("Garaj Bakımı Maliyeti Ekle"):
+    bakim_tutari = st.number_input("Garaj Bakımı İçin Ödenen Tutar (Dolar)", min_value=0.0, format="%.2f", key="garaj_bakim_tutari")
+    if st.button("Garaj Bakımı Maliyeti Kaydet", key="garaj_bakim_kaydet"):
+        st.session_state.garaj_bakimi = bakim_tutari
+        st.success(f"Garaj bakım maliyeti {bakim_tutari:.2f} $ olarak kaydedildi.")
+
+st.markdown("---")
+
+# --- İhale Raporları ---
+st.header("İhale Raporları")
+if st.session_state.ihaleler:
+    df = pd.DataFrame(st.session_state.ihaleler)
+    df['tarih'] = pd.to_datetime(df['tarih'])
+    
+    secim = st.selectbox("Rapor Tipi", ["Günlük", "Haftalık", "Aylık"])
+    now = datetime.now()
+
+    if secim == "Günlük":
+        filtre = df[df['tarih'].dt.date == now.date()]
+    elif secim == "Haftalık":
+        filtre = df[df['tarih'].dt.isocalendar().week == now.isocalendar()[1]]
+    else:
+        filtre = df[df['tarih'].dt.month == now.month]
+
+    st.write(filtre)
+
+    toplam_ihale = len(filtre)
+    toplam_tutar = filtre['ihale_tutari'].sum()
+    toplam_maliyet = filtre['toplam_maliyet'].sum()
+    toplam_kar = filtre['kar'].sum()
+    tur_sayilari = filtre['ihale_turu'].value_counts()
+
+    st.write(f"Toplam İhale Sayısı: {toplam_ihale}")
+    st.write(f"Toplam İhale Tutarı (Milyon Dolar): {toplam_tutar:.2f}")
+    st.write(f"Toplam Ürün Maliyeti (Dolar): {toplam_maliyet:.2f}")
+    st.write(f"Toplam Kar (Milyon Dolar): {toplam_kar:.2f}")
+
+    st.write("İhale Türlerine Göre Dağılım:")
+    st.bar_chart(tur_sayilari)
+else:
+    st.info("Henüz ihale eklenmedi.")
+
+st.markdown("---")
+
+# --- Operasyonel Maliyet ve Kazanç Özeti ---
+st.header("Operasyonel Maliyet ve Kazanç Özeti")
+
+toplam_sofor_maasi = sum([s['maas'] for s in st.session_state.sofor_maaslari])
+toplam_bakim_gideri = sum([b['maliyet'] for b in st.session_state.bakim_giderleri])
+toplam_arac_satim = sum([s['fiyat'] for s in st.session_state.arac_satimlari])
+garaj_harcamasi = st.session_state.garaj_harcamasi * 1_000_000  # milyon doları dolara çevirdik
+garaj_bakim_maliyeti = st.session_state.garaj_bakimi
+
+st.write(f"Toplam Şoför Maaşları: {toplam_sofor_maasi:.2f} $")
+st.write(f"Toplam Araç Bakım Giderleri: {toplam_bakim_gideri:.2f} $")
+st.write(f"Toplam Araç Satış Gelirleri: {toplam_arac_satim:.2f} $")
+st.write(f"Garaj Yükseltme Harcaması: {garaj_harcamasi:.2f} $")
+st.write(f"Garaj Bakımı Maliyeti: {garaj_bakim_maliyeti:.2f} $")
+
+# İhale karları ile operasyonel maliyetler arasında net kar hesaplama
+# Burada ihale karları milyon dolar cinsinden, operasyonel giderler dolar cinsinden, birimleri uyumlu hale getirelim
+# İhale karlarını dolar cinsine çevirelim (milyon dolar * 1_000_000)
+toplam_ihale_kar = sum([i['kar'] for i in st.session_state.ihaleler]) * 1_000_000
+toplam_operasyonel_gider = toplam_sofor_maasi + toplam_bakim_gideri + garaj_harcamasi + garaj_bakim_maliyeti
+net_kar = toplam_ihale_kar + toplam_arac_satim - toplam_operasyonel_gider
+
+st.write(f"**Net Kar (Dolar): {net_kar:.2f} $**")
+
